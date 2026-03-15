@@ -2,282 +2,200 @@ local RedzLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/realr
 
 local Window = RedzLib:MakeWindow({
   Name = "Hehe Hub Pro 🍎",
-  SubTitle = "V11 - Redz Edition (Max 2800)",
+  SubTitle = "V11 - Redz Edition",
   SaveConfig = true,
   ConfigFolder = "HeheHub_V11"
 })
 
--- ==================== HỆ THỐNG BIẾN (Dùng cho Auto Save) ====================
+-- ==================== BIẾN CẤU HÌNH ====================
 _G.Config = {
     AutoFarm = false,
     Weapon = "Melee",
     AutoKarateV3 = false,
-    AutoSeaEvent = false,
     AutoV4 = false,
-    MasteryMode = false,
-    MasteryPercent = 20
+    KillTrial = false,
+    AutoGear = false,
+    AutoHopFullMoon = false, -- Biến cho Server Hop
+    AutoHopMirage = false    -- Biến cho Server Hop
 }
 
 -- ==================== TẠO TABS ====================
 local T1 = Window:MakeTab({"Cày Cấp", "rbxassetid://4483345998"})
 local T2 = Window:MakeTab({"Vật Phẩm & Võ", "rbxassetid://4483345998"})
-local T3 = Window:MakeTab({"Sea Events", "rbxassetid://4483345998"})
 local T4 = Window:MakeTab({"Tộc V4", "rbxassetid://4483345998"})
 local T5 = Window:MakeTab({"Chuyển Server", "rbxassetid://4483345998"})
 
--- ==================== TAB 1: CÀY CẤP & MASTERY ====================
-T1:AddSection({"Cấu Hình Farm"})
-
-T1:AddDropdown({
-  Name = "Chọn Vũ Khí",
-  Options = {"Melee", "Sword", "Fruit"},
-  Default = "Melee",
-  Callback = function(v) _G.Config.Weapon = v end
-})
-
-T1:AddToggle({
-  Name = "Tự Động Cày Cấp (Max 2800)",
-  Default = false,
-  Callback = function(v) _G.Config.AutoFarm = v end
-})
-
-T1:AddToggle({
-  Name = "Farm Mastery (Trái/Súng)",
-  Default = false,
-  Callback = function(v) _G.Config.MasteryMode = v end
-})
-
-T1:AddSlider({
-  Name = "Chuyển vũ khí khi quái còn (%) máu",
-  Min = 1, Max = 100, Default = 20,
-  Callback = function(v) _G.Config.MasteryPercent = v end
-})
-
--- ==================== TAB 2: VẬT PHẨM (PHẢI CÓ KARATE V3) ====================
-T2:AddSection({"Võ Thuật (Melee)"})
-
+-- [Tab 2: Nút Karate V3]
 T2:AddToggle({
   Name = "Auto Sharkman Karate (V3)",
   Default = false,
   Callback = function(v) _G.Config.AutoKarateV3 = v end
 })
 
-T2:AddButton({"Auto Godhuman", function() print("Đang check điều kiện Godhuman...") end})
+-- [Tab 4: Nút Race V4]
+T4:AddToggle({ Name = "Auto Trial", Default = false, Callback = function(v) _G.Config.AutoV4 = v end })
+T4:AddToggle({ Name = "Auto Up Gear", Default = false, Callback = function(v) _G.Config.AutoGear = v end })
 
-T2:AddSection({"Kiếm Huyền Thoại"})
-T2:AddButton({"Auto Lấy CDK (Cursed Dual Katana)", function() end})
-T2:AddButton({"Auto Lấy Yama/Tushita", function() end})
+-- ==================== TAB 5: NÚT SERVER HOP (MỚI) ====================
+T5:AddSection({"Tìm Kiếm Hàng Hiếm"})
 
--- ==================== TAB 3: SEA EVENTS ====================
-T3:AddToggle({
-  Name = "Auto Sea Event (Levi/Shark/Kitsune)",
+T5:AddToggle({
+  Name = "Tìm Server Trăng Tròn (Full Moon)",
   Default = false,
-  Callback = function(v) _G.Config.AutoSeaEvent = v end
+  Callback = function(v) _G.Config.AutoHopFullMoon = v end
 })
 
--- ==================== TAB 4: TỘC V4 (TRIAL & GEAR) ====================
-T4:AddSection({"Thức Tỉnh Tộc"})
-T4:AddButton({"Auto Lên V2/V3", function() end})
-T4:AddToggle({
-  Name = "Auto Trial (Hoàn thành thử thách)",
+T5:AddToggle({
+  Name = "Tìm Server Đảo Bí Ẩn (Mirage)",
   Default = false,
-  Callback = function(v) _G.Config.AutoV4 = v end
+  Callback = function(v) _G.Config.AutoHopMirage = v end
 })
-T4:AddToggle({
-  Name = "Auto Kill Người Trong Trial",
-  Default = false,
-  Callback = function(v) end
-})
-T4:AddButton({"Auto Up Bánh Răng (Gears)", function() end})
 
--- ==================== TAB 5: SERVER HOP ====================
-T5:AddDropdown({
-  Name = "Tìm Server Có:",
-  Options = {"Full Moon", "Mirage Island", "Rip Indra", "Blackbeard"},
-  Default = "Full Moon",
-  Callback = function(v) _G.TargetHop = v end
+T5:AddButton({
+  Name = "Nhảy Server Ngẫu Nhiên",
+  Callback = function() HopServer() end
 })
-T5:AddButton({"Bắt Đầu Tìm Server", function() end})
 
--- ==================== LOGIC ĐẶC BIỆT: SHARKMAN KARATE (V3) ==================== 
--- ==================== CÁC HÀM HỖ TRỢ (UTILITIES) ====================
+-- ==================== PHẦN RUỘT LOGIC (DƯỚI CÙNG) ====================
+
 local function GetCharacter()
     return game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()
 end
 
 local function TweenTo(cframe)
     local root = GetCharacter():FindFirstChild("HumanoidRootPart")
-    if root then
-        -- Bạn có thể thay bằng TweenService nếu muốn bay mượt hơn
-        root.CFrame = cframe
+    if root then root.CFrame = cframe end
+end
+
+-- Hàm nhảy Server
+function HopServer()
+    local HttpService = game:GetService("HttpService")
+    local TPS = game:GetService("TeleportService")
+    local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
+    for _, s in pairs(Servers.data) do
+        if s.playing < s.maxPlayers and s.id ~= game.JobId then
+            TPS:TeleportToPlaceInstance(game.PlaceId, s.id)
+            break
+        end
     end
 end
 
--- ==================== CHỨC NĂNG CHÍNH: SHARKMAN KARATE ====================
+-- LOGIC TỔNG HỢP (KARATE + V4 + HOP)
 task.spawn(function()
-    while task.wait(0.5) do
-        if _G.Config.AutoKarateV3 then
-            pcall(function()
-                local Player = game.Players.LocalPlayer
-                local Backpack = Player.Backpack
-                local Character = GetCharacter()
-                
-                -- 1. Kiểm tra xem đã sở hữu Sharkman Karate chưa
-                local hasV3 = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkman", "Check")
-                if hasV3 then
-                    _G.Config.AutoKarateV3 = false
-                    print("Bạn đã sở hữu Sharkman Karate!")
-                    return
-                end
+    while task.wait(1) do 
+      -- ==================== HỆ THỐNG AUTO FARM 3 SEA ====================
+if _G.Config.AutoFarm then
+    pcall(function()
+        local MyLevel = game.Players.LocalPlayer.Data.Level.Value
+        local MySea = game.PlaceId
+        local QuestName, MonsterName, MonsterPos, NPC_Pos, QuestNumber
 
-                -- 2. Kiểm tra Chìa khóa (Water Key)
-                local WaterKey = Backpack:FindFirstChild("Water Key") or Character:FindFirstChild("Water Key")
-                
-                if not WaterKey then
-                    -- BƯỚC A: ĐI SĂN TIDE KEEPER ĐỂ LẤY CHÌA KHÓA
-                    local Boss = game:GetService("Workspace").Enemies:FindFirstChild("Tide Keeper")
-                    
-                    if Boss and Boss:FindFirstChild("HumanoidRootPart") and Boss.Humanoid.Health > 0 then
-                        -- Bay đến và diệt Boss
-                        TweenTo(Boss.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                        
-                        -- Tự động Click (Fast Attack)
-                        game:GetService("VirtualUser"):CaptureController()
-                        game:GetService("VirtualUser"):Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-                    else
-                        -- Nếu Boss chưa hồi sinh, bay đến vị trí chờ (Đảo Forgotten)
-                        TweenTo(CFrame.new(-3033, 237, -10182))
-                    end
-                else
-                    -- BƯỚC B: ĐÃ CÓ CHÌA KHÓA -> ĐẾN NPC DAIGROCK ĐỂ MUA VÕ
-                    -- Vị trí NPC Daigrock tại Đảo Forgotten
-                    local NPC_Pos = CFrame.new(-2828, 240, -11031)
-                    TweenTo(NPC_Pos)
-                    
-                    if (Character.HumanoidRootPart.Position - NPC_Pos.Position).Magnitude < 10 then
-                        -- Gọi lệnh mua võ (Cần 2,5M Beli và 5k Fragment)
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkman", "Topping")
-                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkman", "Buy")
-                    end
-                end
-            end)
-        end
-    end
-end)
-task.spawn(function()
-    while task.wait(1) do
-        if _G.Config.AutoKarateV3 then
-            pcall(function()
-                -- 1. Kiểm tra đã có Water Key chưa
-                if not game.ReplicatedStorage.Remotes.CommF_:InvokeServer("BuySharkman","Check") then
-                    -- 2. Nếu chưa có, đi tìm diệt Tide Keeper (Boss rơi chìa khóa)
-                    -- (Logic Tween tới đảo Forgotten và diệt boss sẽ nằm ở đây)
-                    print("Đang tìm Water Key từ Tide Keeper...")
-                else
-                    -- 3. Nếu có chìa khóa, tự động mua võ
-                    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkman","Topping")
-                end
-            end)
-        end
-    end
-end)
--- ==================== LOGIC RACE V4 (CHẤT XÁM ĐỈNH CAO) ====================
-
-task.spawn(function()
-    while task.wait(0.1) do
-        pcall(function()
-            if _G.Config.AutoV4 then
-                local Player = game.Players.LocalPlayer
-                local Character = Player.Character or Player.CharacterAdded:Wait()
-                
-                -- 1. Tự động bật Tộc (Press T) khi vào Trial
-                if game:GetService("Lighting"):FindFirstChild("RaceV4") then -- Dấu hiệu đang trong Trial
-                    local VirtualInputManager = game:GetService("VirtualInputManager")
-                    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.T, false, game)
-                end
-
-                -- 2. Logic hoàn thành Trial (Mỗi tộc một kiểu, đây là bản Teleport chung)
-                -- Teleport đến vị trí kết thúc của Trial để "ăn gian" thời gian
-                local EndZone = workspace:FindFirstChild("TowerEntry") -- Điểm tập kết sau Trial
-                if EndZone then
-                    Character.HumanoidRootPart.CFrame = EndZone.CFrame
-                end
+        -- ==================== SEA 1 (Dành cho khách hàng mới chơi) ====================
+        if MySea == 2753915133 then
+            if MyLevel >= 1 and MyLevel < 15 then
+                QuestName, MonsterName, QuestNumber = "BanditQuest1", "Bandit", 1
+                NPC_Pos, MonsterPos = CFrame.new(1059, 15, 1549), CFrame.new(1145, 17, 1634)
+            elseif MyLevel >= 15 and MyLevel < 30 then
+                QuestName, MonsterName, QuestNumber = "MonkeyQuest1", "Monkey", 1
+                NPC_Pos, MonsterPos = CFrame.new(-1598, 35, 153), CFrame.new(-1623, 14, 153)
+            -- [Bro có thể copy thêm tọa độ Sea 1 vào đây...]
+            else -- Mặc định nếu chưa có tọa độ các đảo sau
+                QuestName, MonsterName, QuestNumber = "CyborgQuest", "Cyborg", 1
+                NPC_Pos, MonsterPos = CFrame.new(-5201, 15, 8485), CFrame.new(-5201, 15, 8485)
             end
-            
-            -- 3. Auto Kill người trong Trial (Để thắng)
-            if _G.Config.KillTrial then
-                for _, v in pairs(game.Players:GetPlayers()) do
-                    if v ~= game.Players.LocalPlayer and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                        -- Chỉ giết những người đang ở gần khu vực Temple of Time
-                        if (v.Character.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude < 500 then
-                            game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
-                            -- Tự động đánh
+
+        -- ==================== SEA 2 (Dành cho khách hàng trung cấp) ====================
+        elseif MySea == 4442245405 then
+            if MyLevel >= 700 and MyLevel < 775 then
+                QuestName, MonsterName, QuestNumber = "Area1Quest", "Raider", 1
+                NPC_Pos, MonsterPos = CFrame.new(-425, 73, 1837), CFrame.new(-426, 72, 1898)
+            -- [Bro có thể copy thêm tọa độ Sea 2 vào đây...]
+            else
+                QuestName, MonsterName, QuestNumber = "IceCastleQuest", "Awakened Ice Admiral", 1
+                NPC_Pos, MonsterPos = CFrame.new(6471, 297, -6903), CFrame.new(6471, 297, -6903)
+            end
+
+        -- ==================== SEA 3 (Dành cho khách hàng VIP) ====================
+        elseif MySea == 7449423635 then
+            if MyLevel >= 1500 and MyLevel < 1575 then
+                QuestName, MonsterName, QuestNumber = "PortTownQuest", "Pirate Billionaire", 1
+                NPC_Pos, MonsterPos = CFrame.new(-290, 15, 5300), CFrame.new(-290, 15, 5300)
+            elseif MyLevel >= 1575 and MyLevel < 1650 then
+                QuestName, MonsterName, QuestNumber = "PortTownQuest", "Pistol Billionaire", 2
+                NPC_Pos, MonsterPos = CFrame.new(-290, 15, 5300), CFrame.new(-470, 75, 5320)
+            -- [Đây là nơi dán các đảo Sea 3 tiếp theo...]
+            else
+                QuestName, MonsterName, QuestNumber = "ChocolateQuest", "Cocoa Warrior", 1
+                NPC_Pos, MonsterPos = CFrame.new(150, 25, 25000), CFrame.new(200, 25, 25100)
+            end
+        end
+
+        -- ==================== LOGIC THỰC THI (CHUNG CHO CẢ 3 SEA) ====================
+        local QuestGui = game:GetService("Players").LocalPlayer.PlayerGui.Main.Quest
+        if not QuestGui.Visible then
+            TweenTo(NPC_Pos)
+            if (game.Players.LocalPlayer.Character.HumanoidRootPart.Position - NPC_Pos.Position).Magnitude < 10 then
+                task.wait(0.2)
+                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", QuestName, QuestNumber)
+            end
+        else
+            local Target = workspace.Enemies:FindFirstChild(MonsterName) or workspace.Enemies:FindFirstChild(MonsterName:sub(1, -2)) -- Sửa lỗi tên quái có s hoặc không
+            if Target and Target:FindFirstChild("HumanoidRootPart") and Target.Humanoid.Health > 0 then
+                -- Bay phía trên đầu quái để không bị nó đánh
+                TweenTo(Target.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
+                -- Tự động Click đánh quái
+                game:GetService("VirtualUser"):CaptureController()
+                game:GetService("VirtualUser"):Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            else
+                TweenTo(MonsterPos) -- Bay đợi quái hồi sinh
+            end
+        end
+    end)
+end
+                    else
+                        -- Bay tới quái và đánh
+                        local Target = workspace.Enemies:FindFirstChild(MonsterName)
+                        if Target and Target:FindFirstChild("HumanoidRootPart") then
+                            TweenTo(Target.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
                             game:GetService("VirtualUser"):Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
                         end
                     end
                 end
             end
+        pcall(function()
+            -- 1. Ruột Karate V3
+            if _G.Config.AutoKarateV3 then
+                local hasV3 = game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkman", "Check")
+                if hasV3 then _G.Config.AutoKarateV3 = false else
+                    local WaterKey = game.Players.LocalPlayer.Backpack:FindFirstChild("Water Key") or GetCharacter():FindFirstChild("Water Key")
+                    if not WaterKey then
+                        local Boss = game:GetService("Workspace").Enemies:FindFirstChild("Tide Keeper")
+                        if Boss and Boss:FindFirstChild("HumanoidRootPart") and Boss.Humanoid.Health > 0 then
+                            TweenTo(Boss.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
+                            game:GetService("VirtualUser"):Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                        else TweenTo(CFrame.new(-3033, 237, -10182)) end
+                    else
+                        TweenTo(CFrame.new(-2828, 240, -11031)) -- Vị trí Daigrock
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkman", "Topping")
+                        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuySharkman", "Buy")
+                    end
+                end
+            end
 
-            -- 4. Auto Up Bánh Răng (Ancient Clock)
-            if _G.Config.AutoGear then
-                -- Gọi Remote nâng cấp trực tiếp (Tiết kiệm thời gian chạy bộ)
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("EvoRace","V4","Upgrade")
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("EvoRace","V4","Check")
+            -- 2. Ruột Server Hop
+            if _G.Config.AutoHopFullMoon then
+                if game:GetService("Lighting").SkyConfig.MoonTextureId ~= "http://www.roblox.com/asset/?id=9709149431" then
+                    HopServer()
+                end
+            end
+
+            if _G.Config.AutoHopMirage then
+                if not game:GetService("Workspace").Map:FindFirstChild("Mirage Island") then
+                    HopServer()
+                end
             end
         end)
     end
 end) 
--- ==================== BỘ MẮT THẦN: QUÉT SERVER ====================
 
-local function HopServer()
-    local HttpService = game:GetService("HttpService")
-    local TPS = game:GetService("TeleportService")
-    local Servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"))
-    
-    for _, s in pairs(Servers.data) do
-        if s.playing < s.maxPlayers and s.id ~= game.JobId then
-            TPS:TeleportToPlaceInstance(game.PlaceId, s.id)
-        end
-    end
-end
-
--- Hàm kiểm tra xem server có đang Trăng Tròn hay không
-local function CheckFullMoon()
-    local Lighting = game:GetService("Lighting")
-    if Lighting.SkyConfig.MoonTextureId == "http://www.roblox.com/asset/?id=9709149431" then -- ID Trăng Tròn
-        return "🌕 Full Moon"
-    else
-        return "🌙 Trăng Thường"
-    end
-end
-
-task.spawn(function()
-    while task.wait(5) do
-        if _G.Config.AutoHopFullMoon then
-            local status = CheckFullMoon()
-            if status ~= "🌕 Full Moon" then
-                print("Không phải Full Moon, đang tìm server khác...")
-                HopServer()
-            else
-                Fluent:Notify({Title = "Hehe Hub", Content = "ĐÃ TÌM THẤY TRĂNG TRÒN!", Duration = 10})
-                _G.Config.AutoHopFullMoon = false -- Dừng lại để làm Trial
-            end
-        end
-        
-        -- Kiểm tra Đảo Bí Ẩn (Mirage Island)
-        if _G.Config.AutoHopMirage then
-            if not game:GetService("Workspace").Map:FindFirstChild("Mirage Island") then
-                print("Không thấy Đảo Bí Ẩn, đang nhảy server...")
-                HopServer()
-            else
-                Fluent:Notify({Title = "Hehe Hub", Content = "CÓ ĐẢO BÍ ẨN TRONG SERVER NÀY!", Duration = 10})
-                _G.Config.AutoHopMirage = false
-            end
-        end
-    end
-end)
--- ==================== LOGIC AUTO SAVE (QUAN TRỌNG) ====================
--- RedzLib tự động lưu Config khi bạn chọn SaveConfig = true 
--- Mỗi khi bạn bật/tắt Toggle, script sẽ ghi nhớ vào folder HeheHub_V11
-
-RedzLib:SetTheme("Dark") -- Bạn có thể đổi thành "Purple" cho giống Redz gốc
+RedzLib:SetTheme("Dark")
