@@ -1,195 +1,93 @@
--- [[ CONFIGURATION - TÙY CHỈNH NÂNG CẤP ]] --
-_G.AutoBounty = true
-_G.SafeHealth = 35 
-_G.AttackRange = 35 
-_G.ExcludeFriends = true 
-_G.FastAttackSpeed = 0.05 -- Tăng nhẹ lên để tránh bị game check tốc độ đấm
-_G.PredictMode = true -- Dự đoán hướng chạy đối thủ
+-- [[ HEHE HUB V11 - PVP PREDICTOR EDITION ]] --
+local RedzLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/realredz/RedzLibV5/main/Source.lua"))()
 
+local Window = RedzLib:MakeWindow({
+  Name = "Hehe Hub Pro 🍎",
+  SubTitle = "V11 - PvP Hunter",
+  SaveConfig = true,
+  ConfigFolder = "HeheHub_V11"
+})
+
+-- [[ CONFIGURATION ]] --
+_G.AutoBounty = false
+_G.SafeHealth = 35
+_G.FastAttackSpeed = 0.05 -- Tốc độ đấm chuẩn (Né Suspicious)
+_G.Weapon = "Melee"
+
+local T1 = Window:MakeTab({"PvP Hunter", "rbxassetid://4483345998"})
+
+T1:AddToggle({
+    Name = "Bật Auto Săn Bounty",
+    Default = false,
+    Callback = function(v) _G.AutoBounty = v end
+})
+
+-- [[ LOGIC CHỐNG MẠNG KHẢ NGHI & TRUY SÁT ]] --
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local VIM = game:GetService("VirtualInputManager")
 local isEscaping = false
 
--- [[ FUNCTIONS ]] --
-local function IsValid(p)
-    if p == LP or not p.Character then return false end
-    local Char = p.Character
-    local Hum = Char:FindFirstChild("Humanoid")
-    local Root = Char:FindFirstChild("HumanoidRootPart")
-    if _G.ExcludeFriends and LP:IsFriendsWith(p.UserId) then return false end
-    -- Check Safe Zone bằng ForceField hoặc khoảng cách với Spawn (tùy Sea)
-    if Hum and Hum.Health > 0 and Root and not Char:FindFirstChildOfClass("ForceField") then
-        return true
-    end
-    return false
-end
-
 local function InstantTP(targetCFrame)
     if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
         local Root = LP.Character.HumanoidRootPart
-        Root.Velocity = Vector3.zero
+        Root.Velocity = Vector3.new(0,0,0)
         Root.CFrame = targetCFrame
     end
 end
 
--- Tự động cầm vũ khí (Ưu tiên Kiếm hoặc Melee)
-local function EquipWeapon()
-    local Char = LP.Character
-    if not Char:FindFirstChildOfClass("Tool") then
-        for _, tool in pairs(LP.Backpack:GetChildren()) do
-            if tool:IsA("Tool") and (tool.ToolTip == "Melee" or tool.ToolTip == "Sword") then
-                Char.Humanoid:EquipTool(tool)
-                break
-            end
-        end
-    end
-end
-
--- [[ MAIN LOOP ]] --
 task.spawn(function()
-    while _G.AutoBounty do
-        task.wait(_G.FastAttackSpeed)
-        pcall(function()
-            local MyChar = LP.Character
-            local MyHum = MyChar:FindFirstChild("Humanoid")
-            local MyRoot = MyChar:FindFirstChild("HumanoidRootPart")
+    while task.wait(_G.FastAttackSpeed) do
+        if _G.AutoBounty then
+            pcall(function()
+                local MyChar = LP.Character
+                local MyHum = MyChar:FindFirstChild("Humanoid")
+                local MyRoot = MyChar:FindFirstChild("HumanoidRootPart")
 
-            if MyHum and MyRoot then
-                -- 1. ANTI-DIE & RESET (Flash lên trời)
-                local HPPercent = (MyHum.Health / MyHum.MaxHealth) * 100
-                if HPPercent <= _G.SafeHealth or isEscaping then
-                    isEscaping = true
-                    InstantTP(CFrame.new(MyRoot.Position.X, 2500, MyRoot.Position.Z)) 
-                    if HPPercent >= 90 then isEscaping = false end
-                    return 
-                end
+                if MyHum and MyRoot then
+                    -- 1. HỆ THỐNG ANTI-DIE (Flash lên trời khi yếu máu)
+                    if (MyHum.Health / MyHum.MaxHealth) * 100 <= _G.SafeHealth or isEscaping then
+                        isEscaping = true
+                        InstantTP(CFrame.new(MyRoot.Position.X, 2500, MyRoot.Position.Z))
+                        if (MyHum.Health / MyHum.MaxHealth) * 100 >= 90 then isEscaping = false end
+                        return 
+                    end
 
-                -- 2. QUÉT VÀ TRUY SÁT
-                for _, p in pairs(Players:GetPlayers()) do
-                    if IsValid(p) and not isEscaping then
-                        local TRoot = p.Character.HumanoidRootPart
-                        local TVelocity = TRoot.Velocity
-                        
-                        -- CƠ CHẾ NÉ MẠNG KHẢ NGHI: Bay xoay quanh và dự đoán hướng
-                        -- Tính toán vị trí dự đoán dựa trên vận tốc địch
-                        local PredictPos = TRoot.CFrame * CFrame.new(0, 0, - (TVelocity.Magnitude * 0.1))
-                        
-                        -- Orbit (Xoay quanh): Giúp đòn đánh trông tự nhiên hơn
-                        local Angle = tick() * 8 -- Tốc độ xoay
-                        local Orbit = CFrame.new(math.sin(Angle) * 15, 5, math.cos(Angle) * 15)
-                        
-                        InstantTP(PredictPos * Orbit)
-                        
-                        -- Tấn công
-                        EquipWeapon()
-                        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                        
-                        -- Nếu đối thủ dùng chiêu khống chế hoặc mình quá gần, dạt ra nhẹ
-                        if (MyRoot.Position - TRoot.Position).Magnitude < 5 then
-                            InstantTP(MyRoot.CFrame * CFrame.new(0, 20, 0))
+                    -- 2. QUÉT VÀ DI CHUYỂN THÔNG MINH (ORBIT + PREDICT)
+                    for _, p in pairs(Players:GetPlayers()) do
+                        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character.Humanoid.Health > 0 and not p.Character:FindFirstChildOfClass("ForceField") then
+                            
+                            local TRoot = p.Character.HumanoidRootPart
+                            local TVelocity = TRoot.Velocity
+                            
+                            -- Dự đoán vị trí địch sẽ chạy tới
+                            local PredictPos = TRoot.CFrame * CFrame.new(0, 0, -(TVelocity.Magnitude * 0.1))
+                            
+                            -- Xoay quanh mục tiêu (Orbit) để né check mạng khả nghi
+                            local Angle = tick() * 8
+                            local Orbit = CFrame.new(math.sin(Angle) * 15, 5, math.cos(Angle) * 15)
+                            
+                            InstantTP(PredictPos * Orbit)
+                            
+                            -- Tự cầm vũ khí
+                            local tool = LP.Backpack:FindFirstChild(_G.Weapon) or MyChar:FindFirstChild(_G.Weapon)
+                            if tool then MyHum:EquipTool(tool) end
+                            
+                            -- Đấm M1
+                            VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                            VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                            break -- Chỉ tập trung diệt 1 người mỗi lúc
                         end
                     end
                 end
-            end
-        end)
-    end
-end)-- [[ CONFIGURATION - TÙY CHỈNH NÂNG CẤP ]] --
-_G.AutoBounty = true
-_G.SafeHealth = 35 
-_G.AttackRange = 35 
-_G.ExcludeFriends = true 
-_G.FastAttackSpeed = 0.05 -- Tăng nhẹ lên để tránh bị game check tốc độ đấm
-_G.PredictMode = true -- Dự đoán hướng chạy đối thủ
-
-local Players = game:GetService("Players")
-local LP = Players.LocalPlayer
-local VIM = game:GetService("VirtualInputManager")
-local isEscaping = false
-
--- [[ FUNCTIONS ]] --
-local function IsValid(p)
-    if p == LP or not p.Character then return false end
-    local Char = p.Character
-    local Hum = Char:FindFirstChild("Humanoid")
-    local Root = Char:FindFirstChild("HumanoidRootPart")
-    if _G.ExcludeFriends and LP:IsFriendsWith(p.UserId) then return false end
-    -- Check Safe Zone bằng ForceField hoặc khoảng cách với Spawn (tùy Sea)
-    if Hum and Hum.Health > 0 and Root and not Char:FindFirstChildOfClass("ForceField") then
-        return true
-    end
-    return false
-end
-
-local function InstantTP(targetCFrame)
-    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        local Root = LP.Character.HumanoidRootPart
-        Root.Velocity = Vector3.zero
-        Root.CFrame = targetCFrame
-    end
-end
-
--- Tự động cầm vũ khí (Ưu tiên Kiếm hoặc Melee)
-local function EquipWeapon()
-    local Char = LP.Character
-    if not Char:FindFirstChildOfClass("Tool") then
-        for _, tool in pairs(LP.Backpack:GetChildren()) do
-            if tool:IsA("Tool") and (tool.ToolTip == "Melee" or tool.ToolTip == "Sword") then
-                Char.Humanoid:EquipTool(tool)
-                break
-            end
+            end)
         end
-    end
-end
-
--- [[ MAIN LOOP ]] --
-task.spawn(function()
-    while _G.AutoBounty do
-        task.wait(_G.FastAttackSpeed)
-        pcall(function()
-            local MyChar = LP.Character
-            local MyHum = MyChar:FindFirstChild("Humanoid")
-            local MyRoot = MyChar:FindFirstChild("HumanoidRootPart")
-
-            if MyHum and MyRoot then
-                -- 1. ANTI-DIE & RESET (Flash lên trời)
-                local HPPercent = (MyHum.Health / MyHum.MaxHealth) * 100
-                if HPPercent <= _G.SafeHealth or isEscaping then
-                    isEscaping = true
-                    InstantTP(CFrame.new(MyRoot.Position.X, 2500, MyRoot.Position.Z)) 
-                    if HPPercent >= 90 then isEscaping = false end
-                    return 
-                end
-
-                -- 2. QUÉT VÀ TRUY SÁT
-                for _, p in pairs(Players:GetPlayers()) do
-                    if IsValid(p) and not isEscaping then
-                        local TRoot = p.Character.HumanoidRootPart
-                        local TVelocity = TRoot.Velocity
-                        
-                        -- CƠ CHẾ NÉ MẠNG KHẢ NGHI: Bay xoay quanh và dự đoán hướng
-                        -- Tính toán vị trí dự đoán dựa trên vận tốc địch
-                        local PredictPos = TRoot.CFrame * CFrame.new(0, 0, - (TVelocity.Magnitude * 0.1))
-                        
-                        -- Orbit (Xoay quanh): Giúp đòn đánh trông tự nhiên hơn
-                        local Angle = tick() * 8 -- Tốc độ xoay
-                        local Orbit = CFrame.new(math.sin(Angle) * 15, 5, math.cos(Angle) * 15)
-                        
-                        InstantTP(PredictPos * Orbit)
-                        
-                        -- Tấn công
-                        EquipWeapon()
-                        VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                        VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                        
-                        -- Nếu đối thủ dùng chiêu khống chế hoặc mình quá gần, dạt ra nhẹ
-                        if (MyRoot.Position - TRoot.Position).Magnitude < 5 then
-                            InstantTP(MyRoot.CFrame * CFrame.new(0, 20, 0))
-                        end
-                    end
-                end
-            end
-        end)
     end
 end)
+
+-- Thông báo khi chạy script
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Hehe Hub Pro 🍎",
+    Text = "V11 PvP Hunter đã sẵn sàng!",
+    Duration = 5
+})
