@@ -1,93 +1,160 @@
--- [[ HEHE HUB V11 - PVP PREDICTOR EDITION ]] --
-local RedzLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/realredz/RedzLibV5/main/Source.lua"))()
+[ CONFIGURATION - TÙY CHỈNH ]] --
+_G.AutoBounty = true
+_G.SafeHealth = 35 -- Dưới 35% máu sẽ flash biến mất
+_G.AttackRange = 35 -- Tầm đánh (Siêu xa)
+_G.ExcludeFriends = true -- Không đánh bạn bè
+_G.FastAttackSpeed = 0.01 -- Tốc độ click chuột
 
-local Window = RedzLib:MakeWindow({
-  Name = "Hehe Hub Pro 🍎",
-  SubTitle = "V11 - PvP Hunter",
-  SaveConfig = true,
-  ConfigFolder = "HeheHub_V11"
-})
-
--- [[ CONFIGURATION ]] --
-_G.AutoBounty = false
-_G.SafeHealth = 35
-_G.FastAttackSpeed = 0.05 -- Tốc độ đấm chuẩn (Né Suspicious)
-_G.Weapon = "Melee"
-
-local T1 = Window:MakeTab({"PvP Hunter", "rbxassetid://4483345998"})
-
-T1:AddToggle({
-    Name = "Bật Auto Săn Bounty",
-    Default = false,
-    Callback = function(v) _G.AutoBounty = v end
-})
-
--- [[ LOGIC CHỐNG MẠNG KHẢ NGHI & TRUY SÁT ]] --
+-- [[ SERVICES ]] --
 local Players = game:GetService("Players")
 local LP = Players.LocalPlayer
 local VIM = game:GetService("VirtualInputManager")
 local isEscaping = false
 
+-- [[ FUNCTIONS ]] --
+
+-- Kiểm tra mục tiêu hợp lệ (Có PvP, không Safe Zone)
+local function IsValid(p)
+if p == LP or not p.Character then return false end
+local Char = p.Character
+local Hum = Char:FindFirstChild("Humanoid")
+local Root = Char:FindFirstChild("HumanoidRootPart")
+
+if _G.ExcludeFriends and LP:IsFriendsWith(p.UserId) then return false end
+
+if Hum and Hum.Health > 0 and Root and not Char:FindFirstChildOfClass("ForceField") then
+    return true
+end
+return false
+end
+
+-- Dịch chuyển tức thời và triệt tiêu lực quán tính
 local function InstantTP(targetCFrame)
-    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        local Root = LP.Character.HumanoidRootPart
-        Root.Velocity = Vector3.new(0,0,0)
-        Root.CFrame = targetCFrame
+if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+local Root = LP.Character.HumanoidRootPart
+Root.Velocity = Vector3.new(0, 0, 0)
+Root.CFrame = targetCFrame
+end
+end
+
+-- Hàm Fast Attack (Sử dụng task.spawn để đấm siêu nhanh)
+local function FastAttack()
+VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+end
+
+-- [[ MAIN LOOP ]] --
+task.spawn(function()
+while _G.AutoBounty do
+task.wait()
+pcall(function()
+local MyChar = LP.Character
+local MyHum = MyChar:FindFirstChild("Humanoid")
+local MyRoot = MyChar:FindFirstChild("HumanoidRootPart")
+
+        if MyHum and MyRoot then
+            -- --- HỆ THỐNG ANTI-DIE TỨC THỜI ---
+            local HPPercent = (MyHum.Health / MyHum.MaxHealth) * 100
+            if HPPercent <= _G.SafeHealth or isEscaping then
+                isEscaping = true
+                InstantTP(MyRoot.CFrame * CFrame.new(0, 2000, 0)) -- Biến mất lên trời cực cao
+                if HPPercent >= 95 then isEscaping = false end
+                return 
+            end
+
+            -- --- QUÉT TOÀN SERVER ---
+            for _, p in pairs(Players:GetPlayers()) do
+                if IsValid(p) and not isEscaping then
+                    local TargetChar = p.Character
+                    local TRoot = TargetChar.HumanoidRootPart
+                    
+                    -- Tự động cầm vũ khí/trái ác quỷ (Nếu chưa cầm)
+                    if not MyChar:FindFirstChildOfClass("Tool") then
+                        for _, tool in pairs(LP.Backpack:GetChildren()) do 
+
+-- [[ SMART SERVER HOP V11 - CHỜ HẾT COMBAT MỚI ĐỔI ]] --
+
+local TimeWaiting = 0
+_G.AutoHop = true
+
+-- Hàm kiểm tra xem bản thân có đang trong trạng thái Combat không
+-- (Dựa trên GUI của Blox Fruits hoặc kiểm tra xem có lấy được Bounty không)
+local function IsInCombat()
+    local PlayerGui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+    -- Kiểm tra dòng chữ "In Combat" trên màn hình (Thường nằm trong Main hoặc HUD)
+    if PlayerGui then
+        -- Cách phổ biến: Quét qua các TextLabel xem cái nào chứa chữ "Combat" và đang hiện
+        for _, v in pairs(PlayerGui:GetDescendants()) do
+            if v:IsA("TextLabel") and (string.find(string.lower(v.Text), "combat") or string.find(string.lower(v.Text), "giao tranh")) then
+                if v.Visible and v.TextTransparency < 1 then
+                    return true
+                end
+            end
+        end
     end
+    return false
 end
 
 task.spawn(function()
-    while task.wait(_G.FastAttackSpeed) do
-        if _G.AutoBounty then
-            pcall(function()
-                local MyChar = LP.Character
-                local MyHum = MyChar:FindFirstChild("Humanoid")
-                local MyRoot = MyChar:FindFirstChild("HumanoidRootPart")
-
-                if MyHum and MyRoot then
-                    -- 1. HỆ THỐNG ANTI-DIE (Flash lên trời khi yếu máu)
-                    if (MyHum.Health / MyHum.MaxHealth) * 100 <= _G.SafeHealth or isEscaping then
-                        isEscaping = true
-                        InstantTP(CFrame.new(MyRoot.Position.X, 2500, MyRoot.Position.Z))
-                        if (MyHum.Health / MyHum.MaxHealth) * 100 >= 90 then isEscaping = false end
-                        return 
-                    end
-
-                    -- 2. QUÉT VÀ DI CHUYỂN THÔNG MINH (ORBIT + PREDICT)
-                    for _, p in pairs(Players:GetPlayers()) do
-                        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character.Humanoid.Health > 0 and not p.Character:FindFirstChildOfClass("ForceField") then
-                            
-                            local TRoot = p.Character.HumanoidRootPart
-                            local TVelocity = TRoot.Velocity
-                            
-                            -- Dự đoán vị trí địch sẽ chạy tới
-                            local PredictPos = TRoot.CFrame * CFrame.new(0, 0, -(TVelocity.Magnitude * 0.1))
-                            
-                            -- Xoay quanh mục tiêu (Orbit) để né check mạng khả nghi
-                            local Angle = tick() * 8
-                            local Orbit = CFrame.new(math.sin(Angle) * 15, 5, math.cos(Angle) * 15)
-                            
-                            InstantTP(PredictPos * Orbit)
-                            
-                            -- Tự cầm vũ khí
-                            local tool = LP.Backpack:FindFirstChild(_G.Weapon) or MyChar:FindFirstChild(_G.Weapon)
-                            if tool then MyHum:EquipTool(tool) end
-                            
-                            -- Đấm M1
-                            VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                            VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-                            break -- Chỉ tập trung diệt 1 người mỗi lúc
-                        end
-                    end
+    while task.wait(1) do
+        if _G.AutoBounty and _G.AutoHop then
+            local TargetFound = false
+            
+            -- 1. Quét tìm mục tiêu hợp lệ
+            for _, p in pairs(game.Players:GetPlayers()) do
+                if p ~= game.Players.LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") 
+                and p.Character.Humanoid.Health > 0 and not p.Character:FindFirstChildOfClass("ForceField") then
+                    TargetFound = true
+                    break
                 end
-            end)
+            end
+            
+            -- 2. Logic xử lý đổi Server
+            if not TargetFound then
+                -- Nếu không còn ai, kiểm tra xem còn "In Combat" không
+                if not IsInCombat() then
+                    TimeWaiting = TimeWaiting + 1
+                    
+                    -- Thông báo cho khách hàng biết đang chờ đổi SV
+                    if TimeWaiting % 10 == 0 then -- Mỗi 10 giây thông báo 1 lần
+                        print("Hehe Hub: Đã diệt sạch mồi, đang chờ " .. (60 - TimeWaiting) .. "s để đổi SV...")
+                    end
+
+                    if TimeWaiting >= 60 then -- Đợi đúng 1 phút (60 giây)
+                        HopServer()
+                    end
+                else
+                    -- Nếu vẫn đang Combat thì reset thời gian chờ, không được đổi!
+                    TimeWaiting = 0
+                end
+            else
+                -- Vẫn còn người để săn thì reset tất cả
+                TimeWaiting = 0
+            end
         end
     end
 end)
 
--- Thông báo khi chạy script
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Hehe Hub Pro 🍎",
-    Text = "V11 PvP Hunter đã sẵn sàng!",
-    Duration = 5
-})
+-- Hàm Hop Server ổn định
+function HopServer()
+    local Http = game:GetService("HttpService")
+    local TPS = game:GetService("TeleportService")
+    local Api = "https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Desc&limit=100"
+    
+    pcall(function()
+        local Raw = game:HttpGet(Api)
+        local Decode = Http:JSONDecode(Raw)
+        local Servers = Decode.data
+        local Possible = {}
+        
+        for _, v in pairs(Servers) do
+            if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                table.insert(Possible, v.id)
+            end
+        end
+        
+        if #Possible > 0 then
+            TPS:TeleportToPlaceInstance(game.PlaceId, Possible[math.random(1, #Possible)])
+        end
+    end)
+end
